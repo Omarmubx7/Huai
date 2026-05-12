@@ -1,5 +1,5 @@
 
-  # Start Project
+  # HUAI
 
   This is a code bundle for Start Project. The original project is available at https://www.figma.com/design/wV4AtLl9jQzyHeC9v4egYa/Start-Project.
 
