@@ -36,10 +36,14 @@ export default function MedicationAutocomplete({
       </Typography>
       <Autocomplete
         multiple
+        freeSolo
         options={options}
-        value={options.filter(opt => selectedMedications.includes(opt.value))}
+        value={selectedMedications.map(val => {
+          const opt = options.find(o => o.value === val);
+          return opt ? opt : { label: val, value: val, medication: { class: "جرعة مخصصة" } as any, dosage: "" };
+        })}
         onChange={(_, newValue) => {
-          onChange(newValue.map(v => v.value));
+          onChange(newValue.map((v: any) => typeof v === 'string' ? v : v.value));
         }}
         inputValue={inputValue}
         onInputChange={(_, newInputValue) => {
@@ -58,25 +62,32 @@ export default function MedicationAutocomplete({
           />
         )}
         renderTags={(tagValue, getTagProps) =>
-          tagValue.map((option, index) => (
-            <Chip
-              label={option.label}
-              {...getTagProps({ index })}
-              sx={{
-                bgcolor: category === "diabetes" ? "rgba(245,158,11,0.2)" : "rgba(239,68,68,0.2)",
-                color: category === "diabetes" ? "#f59e0b" : "#ef4444",
-              }}
-            />
-          ))
+          tagValue.map((option, index) => {
+            const { key, ...tagProps } = getTagProps({ index });
+            return (
+              <Chip
+                key={key}
+                label={option.label}
+                {...tagProps}
+                sx={{
+                  bgcolor: category === "diabetes" ? "rgba(245,158,11,0.2)" : "rgba(239,68,68,0.2)",
+                  color: category === "diabetes" ? "#f59e0b" : "#ef4444",
+                }}
+              />
+            );
+          })
         }
-        renderOption={(props, option) => (
-          <Box component="li" {...props} sx={{ direction: "rtl", display: "block" }}>
-            <Typography variant="body2">{option.label}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {option.medication.class}
-            </Typography>
-          </Box>
-        )}
+        renderOption={(props, option) => {
+          const { key, ...optionProps } = props as any;
+          return (
+            <Box component="li" key={key} {...optionProps} sx={{ direction: "rtl", display: "block" }}>
+              <Typography variant="body2">{option.label}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {option.medication.class}
+              </Typography>
+            </Box>
+          );
+        }}
         noOptionsText="لا توجد نتائج"
         sx={{ direction: "rtl" }}
       />

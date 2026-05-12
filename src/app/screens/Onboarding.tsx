@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { api } from "../../utils/api";
 import { usePatient } from "../../contexts/PatientContext";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   Box,
   Container,
@@ -24,7 +25,7 @@ import {
   Grid,
   CircularProgress,
 } from "@mui/material";
-import { Favorite, Bloodtype, ArrowForward } from "@mui/icons-material";
+import { Favorite, Bloodtype, ArrowForward, Logout } from "@mui/icons-material";
 import { motion } from "motion/react";
 import MedicationAutocomplete from "../components/MedicationAutocomplete";
 import { getDiabetesStatus, getBPStatus } from "../../utils/medicalUtils";
@@ -36,6 +37,7 @@ const MotionCard = motion.create(Card);
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const { setCurrentPatient, refreshPatients, currentPatient, loading: patientLoading } = usePatient();
   const [activeStep, setActiveStep] = useState(0);
 
@@ -205,6 +207,16 @@ export default function Onboarding() {
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}>
               نظام ذكاء اصطناعي متخصص في السكري وضغط الدم
+            </Typography>
+            <Button size="small" startIcon={<Logout />} onClick={signOut} sx={{ mt: 1, color: 'text.secondary' }}>
+              تسجيل الخروج
+            </Button>
+          </Box>
+
+          {/* Medical Disclaimer */}
+          <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 2, textAlign: 'center' }}>
+            <Typography variant="caption" color="warning.main" sx={{ fontSize: '0.7rem', lineHeight: 1.6 }}>
+              ⚠️ هذا التطبيق للتوعية الصحية فقط ولا يُغني عن استشارة الطبيب المختص.
             </Typography>
           </Box>
 

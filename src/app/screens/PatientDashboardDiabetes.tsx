@@ -26,9 +26,10 @@ import {
   IconButton,
   Tooltip,
 } from "@mui/material";
-import { Send, SmartToy, FiberManualRecord, Add, People } from "@mui/icons-material";
+import { Send, SmartToy, FiberManualRecord, Add, People, Logout } from "@mui/icons-material";
 import { motion, AnimatePresence } from "motion/react";
 import { usePatient } from "../../contexts/PatientContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { api, Message } from "../../utils/api";
 import { useNavigate } from "react-router";
 import FormattedMessage from "../components/FormattedMessage";
@@ -38,6 +39,7 @@ const MotionBox = motion.create(Box);
 
 export default function PatientDashboardDiabetes() {
   const { currentPatient, updateCurrentPatient } = usePatient();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -181,6 +183,11 @@ export default function PatientDashboardDiabetes() {
                     <People fontSize="small" />
                   </IconButton>
                 </Tooltip>
+                <Tooltip title="تسجيل الخروج">
+                  <IconButton size="small" onClick={signOut} sx={{ color: "text.secondary" }}>
+                    <Logout fontSize="small" />
+                  </IconButton>
+                </Tooltip>
                 <Badge badgeContent="متصل" color="success" sx={{ "& .MuiBadge-badge": { fontSize: "0.7rem", height: 20, minWidth: 20, borderRadius: 10 } }}>
                   <FiberManualRecord sx={{ color: "success.main", fontSize: 12 }} />
                 </Badge>
@@ -309,8 +316,12 @@ export default function PatientDashboardDiabetes() {
               ))}
             </Box>
           </Box>
-
           {/* Input Area */}
+          <Box sx={{ px: 2, pt: 0, pb: 0.5, bgcolor: "#0f172a", textAlign: "center" }}>
+            <Typography variant="caption" sx={{ color: "rgba(245,158,11,0.6)", fontSize: "0.6rem" }}>
+              ⚠️ هذا التطبيق للتوعية فقط ولا يُغني عن الطبيب
+            </Typography>
+          </Box>
           <Box sx={{ p: 2, bgcolor: "#0f172a" }}>
             <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-end" }}>
               <Fab color="primary" size="small" onClick={() => handleSend()} disabled={!input.trim() || isTyping} sx={{ flexShrink: 0 }}>

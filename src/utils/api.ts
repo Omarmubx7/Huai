@@ -1,11 +1,20 @@
-import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { projectId } from '/utils/supabase/info';
+import { supabase } from '../contexts/AuthContext';
 
 const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-2063e5bc`;
 
-const headers = {
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${publicAnonKey}`,
-};
+// ── Dynamic auth headers — uses the current Supabase session token ──
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) {
+    throw new Error('NOT_AUTHENTICATED');
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  };
+}
 
 export interface Patient {
   id: string;
@@ -38,18 +47,21 @@ export interface Reading {
 export const api = {
   patients: {
     getAll: async (): Promise<Patient[]> => {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${BASE_URL}/patients`, { headers });
       const data = await response.json();
       return data.success ? data.data : [];
     },
 
     getById: async (id: string): Promise<Patient | null> => {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${BASE_URL}/patients/${id}`, { headers });
       const data = await response.json();
       return data.success ? data.data : null;
     },
 
     create: async (patient: Partial<Patient>): Promise<Patient> => {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${BASE_URL}/patients`, {
         method: 'POST',
         headers,
@@ -61,6 +73,7 @@ export const api = {
     },
 
     update: async (id: string, updates: Partial<Patient>): Promise<Patient> => {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${BASE_URL}/patients/${id}`, {
         method: 'PUT',
         headers,
@@ -72,6 +85,7 @@ export const api = {
     },
 
     delete: async (id: string): Promise<void> => {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${BASE_URL}/patients/${id}`, {
         method: 'DELETE',
         headers,
@@ -83,12 +97,14 @@ export const api = {
 
   readings: {
     getByPatient: async (patientId: string): Promise<Reading[]> => {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${BASE_URL}/readings/${patientId}`, { headers });
       const data = await response.json();
       return data.success ? data.data : [];
     },
 
     add: async (patientId: string, reading: any): Promise<Reading> => {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${BASE_URL}/readings/${patientId}`, {
         method: 'POST',
         headers,
@@ -102,12 +118,14 @@ export const api = {
 
   chat: {
     getHistory: async (patientId: string): Promise<Message[]> => {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${BASE_URL}/chat/${patientId}`, { headers });
       const data = await response.json();
       return data.success ? data.data : [];
     },
 
     sendMessage: async (patientId: string, message: string): Promise<{ userMessage: Message; aiMessage: Message }> => {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${BASE_URL}/chat/${patientId}`, {
         method: 'POST',
         headers,
@@ -121,9 +139,20 @@ export const api = {
 
   stats: {
     get: async (): Promise<any> => {
+      const headers = await getAuthHeaders();
       const response = await fetch(`${BASE_URL}/stats`, { headers });
       const data = await response.json();
       return data.success ? data.data : null;
     },
   },
+
+  admin: {
+    migrateLegacyData: async (): Promise<string> => {
+      const headers = await getAuthHeaders();
+      const response = await fetch(`${BASE_URL}/admin/migrate`, { method: "POST", headers });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error);
+      return data.message;
+    }
+  }
 };

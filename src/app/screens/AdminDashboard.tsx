@@ -54,6 +54,8 @@ import {
   Warning,
 } from "@mui/icons-material";
 import { motion } from "motion/react";
+import { useAuth } from "../../contexts/AuthContext";
+import { api } from "../../utils/api";
 
 const drawerWidth = 260;
 
@@ -61,11 +63,13 @@ const MotionCard = motion.create(Card);
 
 export default function AdminDashboard() {
   const { patients: allPatients, refreshPatients } = usePatient();
+  const { isAdmin, signOut, user } = useAuth();
   const [activeNav, setActiveNav] = useState("overview");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isMigrating, setIsMigrating] = useState(false);
   const [newPatientType, setNewPatientType] = useState<"diabetes" | "hypertension">("diabetes");
   const [newPatientName, setNewPatientName] = useState("");
   const [newPatientAge, setNewPatientAge] = useState("");
@@ -182,6 +186,31 @@ export default function AdminDashboard() {
     setShowAlertModal(true);
   };
 
+  const handleMigrate = async () => {
+    setIsMigrating(true);
+    try {
+      const msg = await api.admin.migrateLegacyData();
+      alert(msg);
+      await refreshPatients();
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
+  // Admin gate
+  if (!isAdmin) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 3 }}>
+        <Avatar sx={{ width: 80, height: 80, bgcolor: 'error.main', fontSize: '2.5rem' }}>🔒</Avatar>
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>غير مصرح بالدخول</Typography>
+        <Typography variant="body2" color="text.secondary">ليس لديك صلاحيات المسؤول. تواصل مع الإدارة.</Typography>
+        <Button variant="outlined" onClick={() => window.history.back()}>رجوع</Button>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ display: "flex", height: "100vh", bgcolor: "#0f172a", flexDirection: { xs: "column", md: "row" } }}>
       {/* Sidebar */}
@@ -257,6 +286,7 @@ export default function AdminDashboard() {
             variant="outlined"
             color="error"
             startIcon={<Logout />}
+            onClick={signOut}
             sx={{ justifyContent: "flex-start" }}
           >
             تسجيل الخروج
@@ -412,6 +442,14 @@ export default function AdminDashboard() {
             <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { xs: "stretch", sm: "center" }, mb: 2, gap: { xs: 2, sm: 0 } }}>
               <Typography variant="h6" sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}>جميع المرضى</Typography>
               <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  color="warning" 
+                  onClick={handleMigrate}
+                  disabled={isMigrating}
+                >
+                  {isMigrating ? "جاري..." : "استرجاع القديم"}
+                </Button>
                 <TextField
                   size="small"
                   placeholder="ابحث عن مريض..."

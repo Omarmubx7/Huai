@@ -13,9 +13,10 @@ import {
   Grid,
   CircularProgress,
 } from "@mui/material";
-import { Add, Lock, Bloodtype, Favorite } from "@mui/icons-material";
+import { Add, Lock, Bloodtype, Favorite, Logout } from "@mui/icons-material";
 import { motion } from "motion/react";
 import { usePatient } from "../../contexts/PatientContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { Patient } from "../../utils/api";
 
 const MotionCard = motion.create(Card);
@@ -23,6 +24,7 @@ const MotionCard = motion.create(Card);
 export default function PatientSelector() {
   const navigate = useNavigate();
   const { patients, setCurrentPatient, loading } = usePatient();
+  const { signOut, isAdmin } = useAuth();
 
   const getInitials = (name: string) => {
     const parts = name.split(" ");
@@ -89,6 +91,9 @@ export default function PatientSelector() {
             <Typography variant="body1" color="text.secondary">
               اختر الملف الشخصي للدخول إلى حسابك الصحي
             </Typography>
+            <Button size="small" startIcon={<Logout />} onClick={signOut} sx={{ mt: 1, color: 'text.secondary' }}>
+              تسجيل الخروج
+            </Button>
           </Box>
         </motion.div>
 
@@ -196,7 +201,8 @@ export default function PatientSelector() {
           </Paper>
         </motion.div>
 
-        {/* Admin Access Link */}
+        {/* Admin Access Link — only for admins */}
+        {isAdmin && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
           <Box sx={{ textAlign: "center", mt: 4 }}>
             <Button
@@ -213,6 +219,7 @@ export default function PatientSelector() {
             </Button>
           </Box>
         </motion.div>
+        )}
       </Container>
     </Box>
   );

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { Patient, api } from '../utils/api';
+import { useAuth } from './AuthContext';
 
 const SAVED_PATIENT_KEY = 'health_app_current_patient_id';
 
@@ -15,6 +16,7 @@ interface PatientContextType {
 const PatientContext = createContext<PatientContextType | undefined>(undefined);
 
 export function PatientProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [currentPatient, setCurrentPatientState] = useState<Patient | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +41,12 @@ export function PatientProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshPatients = async () => {
+    if (!user) {
+      setPatients([]);
+      setCurrentPatientState(null);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const data = await api.patients.getAll();
@@ -63,9 +71,19 @@ export function PatientProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Fetch patients when user changes (login/logout)
   useEffect(() => {
-    refreshPatients();
-  }, []);
+    if (user) {
+      refreshPatients();
+    } else {
+      // Clear everything on logout
+      setPatients([]);
+      setCurrentPatientState(null);
+      savedIdRef.current = null;
+      localStorage.removeItem(SAVED_PATIENT_KEY);
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   return (
     <PatientContext.Provider value={{ currentPatient, setCurrentPatient, updateCurrentPatient, patients, refreshPatients, loading }}>
