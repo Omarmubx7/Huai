@@ -32,6 +32,7 @@ import { usePatient } from "../../contexts/PatientContext";
 import { api, Message } from "../../utils/api";
 import { useNavigate } from "react-router";
 import FormattedMessage from "../components/FormattedMessage";
+import { getDiabetesStatus } from "../../utils/medicalUtils";
 
 const MotionBox = motion.create(Box);
 
@@ -154,23 +155,11 @@ export default function PatientDashboardDiabetes() {
 
   if (!currentPatient) return null;
 
-  const getReadingStatus = () => {
-    const value = currentPatient.lastReading;
-    if (!value) return { text: "لا يوجد", color: "default" as const };
-    if (value < 70) return { text: "منخفض", color: "info" as const };
-    if (value <= 130) return { text: "طبيعي", color: "success" as const };
-    if (value <= 180) return { text: "مرتفع قليلاً", color: "warning" as const };
-    return { text: "مرتفع", color: "error" as const };
-  };
+  const readingStatus = currentPatient.lastReading != null
+    ? getDiabetesStatus(currentPatient.lastReading)
+    : null;
 
-  const getProgressValue = () => Math.min(((currentPatient.lastReading || 0) / 200) * 100, 100);
-
-  const getReadingColor = (val: number) => {
-    if (val < 70) return "#3b82f6";
-    if (val <= 130) return "#22c55e";
-    if (val <= 180) return "#f59e0b";
-    return "#ef4444";
-  };
+  const getProgressValue = () => Math.min(((currentPatient.lastReading || 0) / 400) * 100, 100);
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center", p: { xs: 0, sm: 2 }, overflow: "hidden" }}>
@@ -204,11 +193,11 @@ export default function PatientDashboardDiabetes() {
                 <Card sx={{ bgcolor: "rgba(255, 255, 255, 0.05)" }}>
                   <CardContent sx={{ p: { xs: 1, sm: 1.5 }, "&:last-child": { pb: { xs: 1, sm: 1.5 } } }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem" }}>آخر قراءة</Typography>
-                    <Typography variant="h5" sx={{ color: currentPatient.lastReading ? getReadingColor(currentPatient.lastReading) : "#f59e0b", my: 0.5, fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>
-                      {currentPatient.lastReading || "--"}
+                    <Typography variant="h5" sx={{ color: readingStatus ? readingStatus.color : "#f59e0b", my: 0.5, fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>
+                      {currentPatient.lastReading ?? "--"}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.6rem" }}>mg/dL</Typography>
-                    <Chip label={getReadingStatus().text} size="small" color={getReadingStatus().color} sx={{ mt: 0.5, height: 20, fontSize: "0.65rem", display: "flex" }} />
+                    {readingStatus && <Chip label={readingStatus.label} size="small" color={readingStatus.chipColor} sx={{ mt: 0.5, height: 20, fontSize: "0.6rem", display: "flex" }} />}
                   </CardContent>
                 </Card>
               </Grid>
@@ -361,28 +350,20 @@ export default function PatientDashboardDiabetes() {
               InputProps={{ sx: { fontSize: "1.5rem", textAlign: "center", direction: "ltr" } }}
               inputProps={{ min: 20, max: 600 }}
             />
-            {newReading && Number(newReading) > 0 && (
-              <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h4" sx={{ color: getReadingColor(Number(newReading)), fontWeight: 700 }}>
-                  {newReading} <Typography component="span" variant="body2" color="text.secondary">mg/dL</Typography>
-                </Typography>
-                <Chip
-                  label={
-                    Number(newReading) < 54 ? "🚨 انخفاض حاد — طوارئ" :
-                    Number(newReading) < 70 ? "⬇️ منخفض" :
-                    Number(newReading) <= 130 ? "✅ طبيعي" :
-                    Number(newReading) <= 180 ? "⚠️ مرتفع" :
-                    Number(newReading) <= 250 ? "🔴 مرتفع جداً" : "🚨 خطر"
-                  }
-                  color={
-                    Number(newReading) < 70 ? "info" :
-                    Number(newReading) <= 130 ? "success" :
-                    Number(newReading) <= 180 ? "warning" : "error"
-                  }
-                  sx={{ mt: 1 }}
-                />
-              </Box>
-            )}
+            {newReading && Number(newReading) > 0 && (() => {
+              const s = getDiabetesStatus(Number(newReading));
+              return (
+                <Box sx={{ textAlign: "center" }}>
+                  <Typography variant="h4" sx={{ color: s.color, fontWeight: 700 }}>
+                    {newReading} <Typography component="span" variant="body2" color="text.secondary">mg/dL</Typography>
+                  </Typography>
+                  <Chip label={s.label} color={s.chipColor} sx={{ mt: 1 }} />
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1, px: 1 }}>
+                    {s.action}
+                  </Typography>
+                </Box>
+              );
+            })()}
             <FormControl fullWidth>
               <InputLabel>متى أجريت القراءة؟</InputLabel>
               <Select value={timeOfReading} onChange={(e) => setTimeOfReading(e.target.value)} label="متى أجريت القراءة؟">

@@ -32,6 +32,7 @@ import { usePatient } from "../../contexts/PatientContext";
 import { api, Message } from "../../utils/api";
 import { useNavigate } from "react-router";
 import FormattedMessage from "../components/FormattedMessage";
+import { getBPStatus, getBPCategory } from "../../utils/medicalUtils";
 
 const MotionBox = motion.create(Box);
 
@@ -160,38 +161,17 @@ export default function PatientDashboardHypertension() {
 
   if (!currentPatient) return null;
 
-  const getBPStatus = () => {
-    const reading = currentPatient.lastReading;
-    if (!reading) return { text: "لا يوجد", color: "default" as const };
-    if (reading.systolic < 120 && reading.diastolic < 80) return { text: "طبيعي", color: "success" as const };
-    if (reading.systolic < 130 && reading.diastolic < 85) return { text: "طبيعي مرتفع", color: "success" as const };
-    if (reading.systolic < 140 || reading.diastolic < 90) return { text: "مرتفع قليلاً", color: "warning" as const };
-    return { text: "مرتفع", color: "error" as const };
-  };
-
-  const getBPColor = () => {
-    const r = currentPatient.lastReading;
-    if (!r) return "#ef4444";
-    if (r.systolic >= 180 || r.diastolic >= 120) return "#ef4444";
-    if (r.systolic >= 140 || r.diastolic >= 90) return "#f59e0b";
-    if (r.systolic >= 120) return "#eab308";
-    return "#22c55e";
-  };
+  const reading = currentPatient.lastReading;
+  const bpStatus = reading ? getBPStatus(reading.systolic, reading.diastolic) : null;
 
   const getSystolicProgress = () => {
-    const reading = currentPatient.lastReading;
     if (!reading) return 0;
-    return Math.min((reading.systolic / 180) * 100, 100);
+    return Math.min((reading.systolic / 200) * 100, 100);
   };
 
-  // Validate BP reading for dialog
-  const bpDialogStatus = systolic && diastolic && Number(systolic) > 0 && Number(diastolic) > 0 ? (
-    Number(systolic) >= 180 || Number(diastolic) >= 120 ? { label: "🚨 أزمة ضغط — طوارئ فورية", color: "error" as const } :
-    Number(systolic) >= 140 || Number(diastolic) >= 90 ? { label: "🔴 ارتفاع — المرحلة الثانية", color: "error" as const } :
-    Number(systolic) >= 130 || Number(diastolic) >= 80 ? { label: "⚠️ ارتفاع — المرحلة الأولى", color: "warning" as const } :
-    Number(systolic) >= 120 ? { label: "⚠️ مرتفع قليلاً", color: "warning" as const } :
-    { label: "✅ طبيعي", color: "success" as const }
-  ) : null;
+  const bpDialogStatus = systolic && diastolic && Number(systolic) > 0 && Number(diastolic) > 0
+    ? getBPStatus(Number(systolic), Number(diastolic))
+    : null;
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center", p: { xs: 0, sm: 2 }, overflow: "hidden" }}>
@@ -225,11 +205,11 @@ export default function PatientDashboardHypertension() {
                 <Card sx={{ bgcolor: "rgba(255, 255, 255, 0.05)" }}>
                   <CardContent sx={{ p: { xs: 1, sm: 1.5 }, "&:last-child": { pb: { xs: 1, sm: 1.5 } } }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem" }}>آخر قراءة</Typography>
-                    <Typography variant="h6" sx={{ color: getBPColor(), my: 0.5, fontSize: { xs: "1rem", sm: "1.25rem" } }}>
-                      {currentPatient.lastReading ? `${currentPatient.lastReading.systolic}/${currentPatient.lastReading.diastolic}` : "--"}
+                    <Typography variant="h6" sx={{ color: bpStatus ? bpStatus.color : "#ef4444", my: 0.5, fontSize: { xs: "1rem", sm: "1.25rem" } }}>
+                      {reading ? `${reading.systolic}/${reading.diastolic}` : "--"}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.6rem" }}>mmHg</Typography>
-                    <Chip label={getBPStatus().text} size="small" color={getBPStatus().color} sx={{ mt: 0.5, height: 20, fontSize: "0.65rem", display: "flex" }} />
+                    {bpStatus && <Chip label={bpStatus.label} size="small" color={bpStatus.chipColor} sx={{ mt: 0.5, height: 20, fontSize: "0.6rem", display: "flex" }} />}
                   </CardContent>
                 </Card>
               </Grid>
@@ -397,11 +377,14 @@ export default function PatientDashboardHypertension() {
             </Box>
             {bpDialogStatus && (
               <Box sx={{ textAlign: "center" }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 1, color: bpDialogStatus.color }}>
                   {systolic} / {diastolic}{" "}
                   <Typography component="span" variant="body2" color="text.secondary">mmHg</Typography>
                 </Typography>
-                <Chip label={bpDialogStatus.label} color={bpDialogStatus.color} />
+                <Chip label={bpDialogStatus.label} color={bpDialogStatus.chipColor} />
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1, px: 1 }}>
+                  {bpDialogStatus.action}
+                </Typography>
               </Box>
             )}
             <FormControl fullWidth>

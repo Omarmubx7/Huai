@@ -27,6 +27,7 @@ import {
 import { Favorite, Bloodtype, ArrowForward } from "@mui/icons-material";
 import { motion } from "motion/react";
 import MedicationAutocomplete from "../components/MedicationAutocomplete";
+import { getDiabetesStatus, getBPStatus } from "../../utils/medicalUtils";
 
 type Condition = "diabetes" | "hypertension" | null;
 
@@ -126,20 +127,13 @@ export default function Onboarding() {
   };
 
   const getReadingStatus = (value: number) => {
-    if (condition === "diabetes") {
-      if (value < 70) return { text: "منخفض", color: "info" as const };
-      if (value <= 130) return { text: "طبيعي", color: "success" as const };
-      if (value <= 180) return { text: "مرتفع قليلاً", color: "warning" as const };
-      return { text: "مرتفع", color: "error" as const };
-    }
-    return { text: "", color: "default" as const };
+    const s = getDiabetesStatus(value);
+    return { text: s.label, color: s.chipColor };
   };
 
-  const getBPStatus = (sys: number, dia: number) => {
-    if (sys < 120 && dia < 80) return { text: "طبيعي", color: "success" as const };
-    if (sys < 130 && dia < 85) return { text: "طبيعي مرتفع", color: "success" as const };
-    if (sys < 140 || dia < 90) return { text: "مرتفع قليلاً", color: "warning" as const };
-    return { text: "مرتفع", color: "error" as const };
+  const getBPStatusLabel = (sys: number, dia: number) => {
+    const s = getBPStatus(sys, dia);
+    return { text: s.label, color: s.chipColor };
   };
 
   if (patientLoading) {
@@ -446,8 +440,8 @@ export default function Onboarding() {
                       </Typography>
                     </Typography>
                     <Chip
-                      label={getBPStatus(Number(systolic), Number(diastolic)).text}
-                      color={getBPStatus(Number(systolic), Number(diastolic)).color}
+                      label={getBPStatusLabel(Number(systolic), Number(diastolic)).text}
+                      color={getBPStatusLabel(Number(systolic), Number(diastolic)).color}
                       size="medium"
                     />
                   </Box>
