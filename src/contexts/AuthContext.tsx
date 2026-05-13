@@ -4,7 +4,26 @@ import { projectId, publicAnonKey } from '/utils/supabase/info';
 
 // ── Supabase client (singleton) ──
 const supabaseUrl = `https://${projectId}.supabase.co`;
-const supabase: SupabaseClient = createClient(supabaseUrl, publicAnonKey);
+
+// Robust check for localStorage availability (Safari Private Mode fix)
+const checkStorage = () => {
+  try {
+    const test = '__storage_test__';
+    window.localStorage.setItem(test, test);
+    window.localStorage.removeItem(test);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+const supabase: SupabaseClient = createClient(supabaseUrl, publicAnonKey, {
+  auth: {
+    persistSession: checkStorage(), // Only persist if storage is allowed
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
 export { supabase };
 

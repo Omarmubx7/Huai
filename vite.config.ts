@@ -24,6 +24,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari13'],
+    cssTarget: 'safari13', // Ensures CSS is compatible with older Safari
+  },
   resolve: {
     alias: {
       // Alias @ to the src directory
