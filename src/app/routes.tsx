@@ -4,6 +4,7 @@ import PatientDashboardDiabetes from "./screens/PatientDashboardDiabetes";
 import PatientDashboardHypertension from "./screens/PatientDashboardHypertension";
 import AdminDashboard from "./screens/AdminDashboard";
 import CreateAdmin from "./screens/CreateAdmin";
+import AdminLogin from "./screens/AdminLogin";
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +22,10 @@ export const router = createBrowserRouter([
   {
     path: "/admin",
     Component: AdminDashboard,
+  },
+  {
+    path: "/admin/login",
+    Component: AdminLogin,
   },
   {
     path: "/create-admin",

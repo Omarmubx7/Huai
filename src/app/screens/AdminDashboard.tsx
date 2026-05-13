@@ -55,13 +55,15 @@ import {
 } from "@mui/icons-material";
 import { motion } from "motion/react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useNavigate } from "react-router";
 const drawerWidth = 260;
 
 const MotionCard = motion.create(Card);
 
 export default function AdminDashboard() {
   const { patients: allPatients, refreshPatients } = usePatient();
-  const { isAdmin, signOut } = useAuth();
+  const { isAdmin, signOut, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState("overview");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
@@ -75,10 +77,20 @@ export default function AdminDashboard() {
   const [newPatientDiastolic, setNewPatientDiastolic] = useState("");
   const [stats, setStats] = useState({ totalPatients: 0, diabetesPatients: 0, hypertensionPatients: 0, needsAttention: 0 });
   const [loading, setLoading] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertSuccess, setAlertSuccess] = useState(false);
 
   useEffect(() => {
-    loadStats();
-  }, [allPatients]);
+    if (!authLoading && !isAdmin) {
+      navigate("/admin/login");
+    }
+  }, [isAdmin, authLoading, navigate]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadStats();
+    }
+  }, [allPatients, isAdmin]);
 
   const loadStats = async () => {
     try {
@@ -91,6 +103,11 @@ export default function AdminDashboard() {
       // Keep default stats on error
       setStats({ totalPatients: 0, diabetesPatients: 0, hypertensionPatients: 0, needsAttention: 0 });
     }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/admin/login");
   };
 
   const getPatientStatus = (patient: Patient): "normal" | "warning" | "danger" | "none" => {
@@ -195,7 +212,30 @@ export default function AdminDashboard() {
 
   const handleSendAlert = (patient: Patient) => {
     setSelectedPatient(patient);
+    setAlertMessage(`عزيزي ${patient.name}، نلاحظ أن آخر قراءة لك غير مستقرة. يرجى مراجعة الطبيب في أقرب وقت.`);
     setShowAlertModal(true);
+  };
+
+  const handleConfirmSendAlert = async () => {
+    if (!selectedPatient || !alertMessage) return;
+    
+    setLoading(true);
+    try {
+      // In a real app, this would call an API like api.notifications.send()
+      // For now, we simulate success
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setAlertSuccess(true);
+      setTimeout(() => {
+        setShowAlertModal(false);
+        setAlertSuccess(false);
+        setAlertMessage("");
+      }, 2000);
+    } catch (error) {
+      console.error("Error sending alert:", error);
+      alert("حدث خطأ في إرسال التنبيه");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleMigrate = async () => {
@@ -298,8 +338,8 @@ export default function AdminDashboard() {
             variant="outlined"
             color="error"
             startIcon={<Logout />}
-            onClick={signOut}
-            sx={{ justifyContent: "flex-start" }}
+            onClick={handleLogout}
+            sx={{ borderRadius: 2, py: 1.2, textTransform: "none", fontWeight: 600 }}
           >
             تسجيل الخروج
           </Button>
@@ -328,251 +368,200 @@ export default function AdminDashboard() {
         </AppBar>
 
         <Box sx={{ p: { xs: 2, sm: 3 } }}>
-          {/* Stats Overview */}
-          <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: { xs: 3, sm: 4 } }}>
-            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
-              <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "primary.main" }}>
-                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
-                    <People sx={{ fontSize: { xs: 28, sm: 40 }, color: "text.secondary" }} />
-                    <Typography variant="h3" sx={{ fontWeight: 700, color: "primary.main", fontSize: { xs: "1.75rem", sm: "3rem" } }}>
-                      {stats?.totalPatients ?? 0}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.875rem" } }}>
-                    إجمالي المرضى
-                  </Typography>
-                </CardContent>
-              </MotionCard>
-            </Grid>
-
-            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
-              <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "secondary.main" }}>
-                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
-                    <Bloodtype sx={{ fontSize: { xs: 28, sm: 40 }, color: "text.secondary" }} />
-                    <Typography variant="h3" sx={{ fontWeight: 700, color: "secondary.main", fontSize: { xs: "1.75rem", sm: "3rem" } }}>
-                      {stats?.diabetesPatients ?? 0}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.875rem" } }}>
-                    مرضى السكري
-                  </Typography>
-                </CardContent>
-              </MotionCard>
-            </Grid>
-
-            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
-              <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "error.main" }}>
-                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
-                    <Favorite sx={{ fontSize: { xs: 28, sm: 40 }, color: "text.secondary" }} />
-                    <Typography variant="h3" sx={{ fontWeight: 700, color: "error.main", fontSize: { xs: "1.75rem", sm: "3rem" } }}>
-                      {stats?.hypertensionPatients ?? 0}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.875rem" } }}>
-                    مرضى الضغط
-                  </Typography>
-                </CardContent>
-              </MotionCard>
-            </Grid>
-
-            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
-              <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "warning.main" }}>
-                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
-                    <Warning sx={{ fontSize: { xs: 28, sm: 40 }, color: "text.secondary" }} />
-                    <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 0.5, sm: 1 } }}>
-                      <Typography variant="h3" sx={{ fontWeight: 700, color: "warning.main", fontSize: { xs: "1.75rem", sm: "3rem" } }}>
-                        {stats?.needsAttention ?? 0}
-                      </Typography>
-                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1, repeat: Infinity }}>
-                        <Box sx={{ width: { xs: 8, sm: 10 }, height: { xs: 8, sm: 10 }, bgcolor: "error.main", borderRadius: "50%" }} />
-                      </motion.div>
-                    </Box>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: "0.7rem", sm: "0.875rem" } }}>
-                    يحتاجون متابعة
-                  </Typography>
-                </CardContent>
-              </MotionCard>
-            </Grid>
-          </Grid>
-
-          {/* Alerts Section */}
-          <Box sx={{ mb: { xs: 3, sm: 4 } }}>
-            <Typography variant="h6" sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1, fontSize: { xs: "1rem", sm: "1.25rem" } }}>
-              <Warning color="error" sx={{ fontSize: { xs: 20, sm: 24 } }} />
-              تنبيهات تحتاج انتباه فوري
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {allPatients
-                .filter(p => {
-                  const status = getPatientStatus(p);
-                  return status === "danger" || status === "warning";
-                })
-                .slice(0, 5)
-                .map((patient) => {
-                  const status = getPatientStatus(patient);
-                  return (
-                    <Alert
-                      key={patient.id}
-                      severity={status === "danger" ? "error" : "warning"}
-                      action={
-                        <Button color="inherit" size="small" onClick={() => handleSendAlert(patient)}>
-                          إرسال تنبيه
-                        </Button>
-                      }
-                      icon={patient.condition === "diabetes" ? <Bloodtype /> : <Favorite />}
-                    >
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {patient.name} — {patient.condition === "diabetes" ? "سكر" : "ضغط"}: {getLastReading(patient)}{" "}
-                        {status === "danger" ? "🔴" : "⚠️"}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {getTimeAgo(patient.lastReadingTime)}
-                      </Typography>
-                    </Alert>
-                  );
-                })}
-              {allPatients.filter(p => {
-                const status = getPatientStatus(p);
-                return status === "danger" || status === "warning";
-              }).length === 0 && (
-                <Alert severity="success">
-                  <Typography variant="body2">
-                    ✅ لا توجد حالات تحتاج انتباه فوري
-                  </Typography>
-                </Alert>
+          {/* Conditional Content based on activeNav */}
+          {(activeNav === "overview" || activeNav === "patients" || activeNav === "diabetes" || activeNav === "hypertension" || activeNav === "alerts") && (
+            <>
+              {/* Stats Overview - Only on Overview */}
+              {activeNav === "overview" && (
+                <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: { xs: 3, sm: 4 } }}>
+                  <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+                    <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "primary.main" }}>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
+                          <People sx={{ fontSize: { xs: 28, sm: 40 }, color: "text.secondary" }} />
+                          <Typography variant="h3" sx={{ fontWeight: 700, color: "primary.main", fontSize: { xs: "1.75rem", sm: "3rem" } }}>
+                            {stats?.totalPatients ?? 0}
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">إجمالي المرضى</Typography>
+                      </CardContent>
+                    </MotionCard>
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+                    <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "secondary.main" }}>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
+                          <Bloodtype sx={{ fontSize: { xs: 28, sm: 40 }, color: "text.secondary" }} />
+                          <Typography variant="h3" sx={{ fontWeight: 700, color: "secondary.main", fontSize: { xs: "1.75rem", sm: "3rem" } }}>
+                            {stats?.diabetesPatients ?? 0}
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">مرضى السكري</Typography>
+                      </CardContent>
+                    </MotionCard>
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+                    <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "error.main" }}>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
+                          <Favorite sx={{ fontSize: { xs: 28, sm: 40 }, color: "text.secondary" }} />
+                          <Typography variant="h3" sx={{ fontWeight: 700, color: "error.main", fontSize: { xs: "1.75rem", sm: "3rem" } }}>
+                            {stats?.hypertensionPatients ?? 0}
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">مرضى الضغط</Typography>
+                      </CardContent>
+                    </MotionCard>
+                  </Grid>
+                  <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+                    <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "warning.main" }}>
+                      <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
+                          <Warning sx={{ fontSize: { xs: 28, sm: 40 }, color: "text.secondary" }} />
+                          <Typography variant="h3" sx={{ fontWeight: 700, color: "warning.main", fontSize: { xs: "1.75rem", sm: "3rem" } }}>
+                            {stats?.needsAttention ?? 0}
+                          </Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">يحتاجون متابعة</Typography>
+                      </CardContent>
+                    </MotionCard>
+                  </Grid>
+                </Grid>
               )}
-            </Box>
-          </Box>
 
-          {/* Patients Table */}
-          <Box>
-            <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { xs: "stretch", sm: "center" }, mb: 2, gap: { xs: 2, sm: 0 } }}>
-              <Typography variant="h6" sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}>جميع المرضى</Typography>
-              <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 2 }}>
+              {/* Alerts Section - Only on Overview and Alerts */}
+              {(activeNav === "overview" || activeNav === "alerts") && (
+                <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+                  <Typography variant="h6" sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                    <Warning color="error" />
+                    تنبيهات تحتاج انتباه فوري
+                  </Typography>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    {allPatients
+                      .filter(p => {
+                        const status = getPatientStatus(p);
+                        return status === "danger" || status === "warning";
+                      })
+                      .map((patient) => {
+                        const status = getPatientStatus(patient);
+                        return (
+                          <Alert
+                            key={patient.id}
+                            severity={status === "danger" ? "error" : "warning"}
+                            action={<Button color="inherit" size="small" onClick={() => handleSendAlert(patient)}>إرسال تنبيه</Button>}
+                            icon={patient.condition === "diabetes" ? <Bloodtype /> : <Favorite />}
+                          >
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {patient.name} — {patient.condition === "diabetes" ? "سكر" : "ضغط"}: {getLastReading(patient)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">{getTimeAgo(patient.lastReadingTime)}</Typography>
+                          </Alert>
+                        );
+                      })}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Patients Table */}
+              <Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                  <Typography variant="h6">
+                    {activeNav === "overview" ? "آخر المرضى المضافين" : 
+                     activeNav === "diabetes" ? "مرضى السكري" :
+                     activeNav === "hypertension" ? "مرضى الضغط" : "جميع المرضى"}
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 2 }}>
+                    <TextField
+                      size="small"
+                      placeholder="ابحث..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      InputProps={{ startAdornment: (<InputAdornment position="start"><Search /></InputAdornment>), sx: { direction: "rtl" } }}
+                    />
+                    <Button variant="contained" startIcon={<Add />} onClick={() => setShowAddModal(true)}>إضافة مريض</Button>
+                  </Box>
+                </Box>
+
+                <TableContainer component={Paper} sx={{ bgcolor: "rgba(255, 255, 255, 0.02)" }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell align="right">الاسم</TableCell>
+                        <TableCell align="right">النوع</TableCell>
+                        <TableCell align="right">آخر قراءة</TableCell>
+                        <TableCell align="right">الحالة</TableCell>
+                        <TableCell align="right">إجراءات</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {allPatients
+                        .filter(p => {
+                          if (searchQuery && !p.name.includes(searchQuery)) return false;
+                          if (activeNav === "diabetes") return p.condition === "diabetes";
+                          if (activeNav === "hypertension") return p.condition === "hypertension";
+                          if (activeNav === "alerts") {
+                            const status = getPatientStatus(p);
+                            return status === "danger" || status === "warning";
+                          }
+                          return true;
+                        })
+                        .map((patient) => (
+                          <TableRow key={patient.id} hover>
+                            <TableCell align="right">{patient.name}</TableCell>
+                            <TableCell align="right">
+                              <Chip 
+                                label={patient.condition === "diabetes" ? "سكري" : "ضغط"} 
+                                size="small" 
+                                color={patient.condition === "diabetes" ? "warning" : "error"} 
+                              />
+                            </TableCell>
+                            <TableCell align="right">{getLastReading(patient)}</TableCell>
+                            <TableCell align="right">
+                              <Chip 
+                                label={getPatientStatus(patient) === "normal" ? "✅ طبيعي" : "⚠️ يحتاج متابعة"} 
+                                size="small" 
+                                color={getPatientStatus(patient) === "normal" ? "success" : "warning"} 
+                              />
+                            </TableCell>
+                            <TableCell align="right">
+                              <Box sx={{ display: "flex", gap: 1 }}>
+                                <IconButton size="small" color="primary"><Visibility fontSize="small" /></IconButton>
+                                <IconButton size="small" color="warning" onClick={() => handleSendAlert(patient)}><NotificationAdd fontSize="small" /></IconButton>
+                                <IconButton size="small" color="error" onClick={() => handleDeletePatient(patient.id)}><Delete fontSize="small" /></IconButton>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            </>
+          )}
+
+          {/* Settings / Migration Section */}
+          {activeNav === "settings" && (
+            <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 4 }}>
+              <Settings sx={{ fontSize: 60, mb: 2, color: 'text.secondary' }} />
+              <Typography variant="h5" gutterBottom>إعدادات النظام</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>يمكنك إدارة البيانات المتقدمة وإجراء عمليات الصيانة من هنا.</Typography>
+              <Divider sx={{ mb: 4 }} />
+              <Box sx={{ maxWidth: 400, mx: 'auto' }}>
+                <Typography variant="subtitle1" gutterBottom>نقل البيانات</Typography>
+                <Typography variant="caption" display="block" sx={{ mb: 2 }}>استرجاع البيانات من قاعدة البيانات القديمة (Deno KV) إلى النظام الجديد.</Typography>
                 <Button 
-                  variant="outlined" 
+                  fullWidth
+                  variant="contained" 
                   color="warning" 
                   onClick={handleMigrate}
                   disabled={isMigrating}
+                  startIcon={isMigrating ? <CircularProgress size={20} /> : <Bloodtype />}
                 >
-                  {isMigrating ? "جاري..." : "استرجاع القديم"}
-                </Button>
-                <TextField
-                  size="small"
-                  placeholder="ابحث عن مريض..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search />
-                      </InputAdornment>
-                    ),
-                    sx: { direction: "rtl" },
-                  }}
-                  sx={{ width: { xs: "100%", sm: 250 } }}
-                />
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={() => setShowAddModal(true)}
-                  fullWidth={true}
-                  sx={{ display: { xs: "flex", sm: "inline-flex" } }}
-                >
-                  إضافة مريض
+                  {isMigrating ? "جاري النقل..." : "بدء استرجاع البيانات القديمة"}
                 </Button>
               </Box>
             </Box>
-
-            <TableContainer component={Paper} sx={{ bgcolor: "rgba(255, 255, 255, 0.02)", overflowX: "auto" }}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell align="right">الاسم</TableCell>
-                    <TableCell align="right">النوع</TableCell>
-                    <TableCell align="right">آخر قراءة</TableCell>
-                    <TableCell align="right">الحالة</TableCell>
-                    <TableCell align="right">آخر تسجيل</TableCell>
-                    <TableCell align="right">إجراءات</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {allPatients
-                    .filter((patient) =>
-                      searchQuery === "" || patient.name.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((patient) => {
-                      const status = getPatientStatus(patient);
-                      return (
-                        <TableRow key={patient.id} hover>
-                          <TableCell align="right">{patient.name}</TableCell>
-                          <TableCell align="right">
-                            <Chip
-                              icon={patient.condition === "diabetes" ? <Bloodtype /> : <Favorite />}
-                              label={patient.condition === "diabetes" ? "سكري" : "ضغط"}
-                              size="small"
-                              color={patient.condition === "diabetes" ? "warning" : "error"}
-                              variant="outlined"
-                            />
-                          </TableCell>
-                          <TableCell align="right">{getLastReading(patient)}</TableCell>
-                          <TableCell align="right">
-                            <Chip
-                              label={
-                                status === "normal"
-                                  ? "✅ طبيعي"
-                                  : status === "warning"
-                                  ? "⚠️ مرتفع"
-                                  : status === "danger"
-                                  ? "🔴 مرتفع جداً"
-                                  : "⚠️ لا يوجد"
-                              }
-                              size="small"
-                              color={
-                                status === "normal"
-                                  ? "success"
-                                  : status === "warning"
-                                  ? "warning"
-                                  : status === "danger"
-                                  ? "error"
-                                  : "default"
-                              }
-                            />
-                          </TableCell>
-                          <TableCell align="right">
-                            <Typography variant="body2" color="text.secondary">
-                              {getTimeAgo(patient.lastReadingTime)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Box sx={{ display: "flex", gap: 1 }}>
-                              <IconButton size="small" color="primary">
-                                <Visibility fontSize="small" />
-                              </IconButton>
-                              <IconButton size="small" color="warning" onClick={() => handleSendAlert(patient)}>
-                                <NotificationAdd fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleDeletePatient(patient.id)}
-                              >
-                                <Delete fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
+          )}
         </Box>
       </Box>
 
@@ -683,19 +672,27 @@ export default function AdminDashboard() {
               label="رسالة التنبيه"
               placeholder="اكتب رسالة التنبيه للمريض..."
               variant="outlined"
+              value={alertMessage}
+              onChange={(e) => setAlertMessage(e.target.value)}
               InputProps={{ sx: { direction: "rtl" } }}
             />
+            {alertSuccess && <Alert severity="success">تم إرسال التنبيه بنجاح ✅</Alert>}
             <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-              <Chip label="قراءتك مرتفعة، راجع الطبيب" size="small" variant="outlined" clickable />
-              <Chip label="تذكير بالدواء" size="small" variant="outlined" clickable />
-              <Chip label="موعد متابعة" size="small" variant="outlined" clickable />
+              <Chip label="قراءتك مرتفعة، راجع الطبيب" size="small" variant="outlined" clickable onClick={() => setAlertMessage("نلاحظ ارتفاعاً في قراءاتك، يرجى مراجعة الطبيب لتعديل الخطة العلاجية.")} />
+              <Chip label="تذكير بالدواء" size="small" variant="outlined" clickable onClick={() => setAlertMessage("تذكير ودي بضرورة الالتزام بمواعيد الأدوية المحددة.")} />
+              <Chip label="موعد متابعة" size="small" variant="outlined" clickable onClick={() => setAlertMessage("يرجى حجز موعد متابعة قادم لتقييم حالتك الصحية.")} />
             </Box>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowAlertModal(false)}>إلغاء</Button>
-          <Button variant="contained" startIcon={<NotificationAdd />} onClick={() => setShowAlertModal(false)}>
-            إرسال التنبيه
+          <Button onClick={() => setShowAlertModal(false)} disabled={loading}>إلغاء</Button>
+          <Button 
+            variant="contained" 
+            startIcon={<NotificationAdd />} 
+            onClick={handleConfirmSendAlert}
+            disabled={!alertMessage || loading || alertSuccess}
+          >
+            {loading ? "جاري الإرسال..." : "إرسال التنبيه"}
           </Button>
         </DialogActions>
       </Dialog>
