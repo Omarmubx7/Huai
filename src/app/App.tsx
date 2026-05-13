@@ -42,8 +42,11 @@ function AuthGate() {
     );
   }
 
-  // Not authenticated → show login screen
+  // Not authenticated → check bypass or show login screen
   if (!user) {
+    if (globalThis.location.pathname === '/create-admin') {
+      return <RouterProvider router={router} />;
+    }
     return <LoginScreen />;
   }
 

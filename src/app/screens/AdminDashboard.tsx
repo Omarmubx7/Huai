@@ -55,15 +55,13 @@ import {
 } from "@mui/icons-material";
 import { motion } from "motion/react";
 import { useAuth } from "../../contexts/AuthContext";
-import { api } from "../../utils/api";
-
 const drawerWidth = 260;
 
 const MotionCard = motion.create(Card);
 
 export default function AdminDashboard() {
   const { patients: allPatients, refreshPatients } = usePatient();
-  const { isAdmin, signOut, user } = useAuth();
+  const { isAdmin, signOut } = useAuth();
   const [activeNav, setActiveNav] = useState("overview");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
@@ -74,6 +72,7 @@ export default function AdminDashboard() {
   const [newPatientName, setNewPatientName] = useState("");
   const [newPatientAge, setNewPatientAge] = useState("");
   const [newPatientReading, setNewPatientReading] = useState("");
+  const [newPatientDiastolic, setNewPatientDiastolic] = useState("");
   const [stats, setStats] = useState({ totalPatients: 0, diabetesPatients: 0, hypertensionPatients: 0, needsAttention: 0 });
   const [loading, setLoading] = useState(false);
 
@@ -134,17 +133,29 @@ export default function AdminDashboard() {
   const handleAddPatient = async () => {
     if (!newPatientName || !newPatientAge) return;
 
+    const systolicValue = newPatientReading.trim();
+    const diastolicValue = newPatientDiastolic.trim();
+    const parsedSystolic = systolicValue ? Number(systolicValue) : null;
+    const parsedDiastolic = diastolicValue ? Number(diastolicValue) : null;
+    const hasValidReading = newPatientType === "diabetes"
+      ? parsedSystolic !== null && !Number.isNaN(parsedSystolic)
+      : parsedSystolic !== null && parsedDiastolic !== null && !Number.isNaN(parsedSystolic) && !Number.isNaN(parsedDiastolic);
+
     setLoading(true);
     try {
+      const lastReading = newPatientType === "diabetes"
+        ? parsedSystolic
+        : { systolic: parsedSystolic, diastolic: parsedDiastolic };
+
       await api.patients.create({
         name: newPatientName,
-        age: parseInt(newPatientAge),
+        age: Number.parseInt(newPatientAge, 10),
         condition: newPatientType,
         medications: newPatientType === "diabetes"
           ? ["ميتفورمين 1000mg", "جليبيزيد 5mg"]
           : ["أملوديبين 5mg", "لوسارتان 50mg"],
-        lastReading: newPatientReading ? (newPatientType === "diabetes" ? Number(newPatientReading) : null) : null,
-        lastReadingTime: newPatientReading ? new Date().toISOString() : null,
+        lastReading: hasValidReading ? lastReading : null,
+        lastReadingTime: hasValidReading ? new Date().toISOString() : null,
       });
 
       await refreshPatients();
@@ -152,6 +163,7 @@ export default function AdminDashboard() {
       setNewPatientName("");
       setNewPatientAge("");
       setNewPatientReading("");
+      setNewPatientDiastolic("");
     } catch (error) {
       console.error("Error adding patient:", error);
       alert("حدث خطأ في إضافة المريض");
@@ -206,7 +218,7 @@ export default function AdminDashboard() {
         <Avatar sx={{ width: 80, height: 80, bgcolor: 'error.main', fontSize: '2.5rem' }}>🔒</Avatar>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>غير مصرح بالدخول</Typography>
         <Typography variant="body2" color="text.secondary">ليس لديك صلاحيات المسؤول. تواصل مع الإدارة.</Typography>
-        <Button variant="outlined" onClick={() => window.history.back()}>رجوع</Button>
+        <Button variant="outlined" onClick={() => globalThis.history.back()}>رجوع</Button>
       </Box>
     );
   }
@@ -318,7 +330,7 @@ export default function AdminDashboard() {
         <Box sx={{ p: { xs: 2, sm: 3 } }}>
           {/* Stats Overview */}
           <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: { xs: 3, sm: 4 } }}>
-            <Grid item size={{ xs: 6, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "primary.main" }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
@@ -334,7 +346,7 @@ export default function AdminDashboard() {
               </MotionCard>
             </Grid>
 
-            <Grid item size={{ xs: 6, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "secondary.main" }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
@@ -350,7 +362,7 @@ export default function AdminDashboard() {
               </MotionCard>
             </Grid>
 
-            <Grid item size={{ xs: 6, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "error.main" }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
@@ -366,7 +378,7 @@ export default function AdminDashboard() {
               </MotionCard>
             </Grid>
 
-            <Grid item size={{ xs: 6, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <MotionCard whileHover={{ scale: 1.02 }} sx={{ borderRight: 4, borderColor: "warning.main" }}>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 1, sm: 2 } }}>
@@ -613,8 +625,18 @@ export default function AdminDashboard() {
               variant="outlined"
               value={newPatientReading}
               onChange={(e) => setNewPatientReading(e.target.value)}
-              placeholder={newPatientType === "diabetes" ? "مثال: 120" : "مثال: 120"}
+              placeholder="مثال: 120"
             />
+            {newPatientType === "hypertension" && (
+              <TextField
+                fullWidth
+                label="آخر قراءة (Diastolic)"
+                variant="outlined"
+                value={newPatientDiastolic}
+                onChange={(e) => setNewPatientDiastolic(e.target.value)}
+                placeholder="مثال: 80"
+              />
+            )}
           </Box>
         </DialogContent>
         <DialogActions>

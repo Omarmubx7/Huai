@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { api } from "../../utils/api";
 import { usePatient } from "../../contexts/PatientContext";
 import { useAuth } from "../../contexts/AuthContext";
@@ -37,20 +37,22 @@ const MotionCard = motion.create(Card);
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signOut } = useAuth();
   const { setCurrentPatient, refreshPatients, currentPatient, loading: patientLoading } = usePatient();
   const [activeStep, setActiveStep] = useState(0);
+  const isNewPatientFlow = new URLSearchParams(location.search).get("mode") === "new";
 
   // Auto-redirect if patient already saved
   useEffect(() => {
-    if (!patientLoading && currentPatient) {
+    if (!patientLoading && currentPatient && !isNewPatientFlow) {
       if (currentPatient.condition === "diabetes") {
         navigate("/patient/diabetes", { replace: true });
       } else {
         navigate("/patient/hypertension", { replace: true });
       }
     }
-  }, [patientLoading, currentPatient]);
+  }, [patientLoading, currentPatient, isNewPatientFlow, navigate]);
   const [condition, setCondition] = useState<Condition>(null);
   const [name, setName] = useState("");
   const [medications, setMedications] = useState<string[]>([]);
@@ -90,14 +92,16 @@ export default function Onboarding() {
         readingValue = systolic && diastolic ? { systolic: Number(systolic), diastolic: Number(diastolic) } : null;
       }
 
+      const defaultMedications = condition === "diabetes"
+        ? ["ميتفورمين 1000mg"]
+        : ["أملوديبين 5mg"];
+
       // Create patient
       const newPatient = await api.patients.create({
         name,
         age: 30, // Default age, can be made configurable
         condition,
-        medications: medications.length > 0 ? medications : (condition === "diabetes"
-          ? ["ميتفورمين 1000mg"]
-          : ["أملوديبين 5mg"]),
+        medications: medications.length > 0 ? medications : defaultMedications,
         lastReading: readingValue,
         lastReadingTime: new Date().toISOString(),
       });
@@ -236,7 +240,7 @@ export default function Onboarding() {
               animate={{ opacity: 1, x: 0 }}
             >
               <Grid container spacing={2}>
-                <Grid item size={{ xs: 6 }}>
+                <Grid size={{ xs: 6 }}>
                   <MotionCard
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -262,7 +266,7 @@ export default function Onboarding() {
                   </MotionCard>
                 </Grid>
 
-                <Grid item size={{ xs: 6 }}>
+                <Grid size={{ xs: 6 }}>
                   <MotionCard
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}

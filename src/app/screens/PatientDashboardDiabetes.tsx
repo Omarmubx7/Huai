@@ -65,7 +65,7 @@ export default function PatientDashboardDiabetes() {
 
   useEffect(() => {
     if (!currentPatient) {
-      navigate("/select-patient");
+      navigate("/");
       return;
     }
     if (currentPatient.condition !== "diabetes") {
@@ -81,15 +81,16 @@ export default function PatientDashboardDiabetes() {
       setLoading(true);
       const history = await api.chat.getHistory(currentPatient.id);
       if (history.length === 0) {
+        let lastReadingNote = "";
+        if (currentPatient.lastReading) {
+          lastReadingNote = currentPatient.lastReading > 180
+            ? `لاحظت أن آخر قراءة لك كانت ${currentPatient.lastReading} mg/dL وهي مرتفعة قليلاً.`
+            : `لاحظت أن آخر قراءة لك كانت ${currentPatient.lastReading} mg/dL.`;
+        }
         const initialMessage = `مرحباً ${currentPatient.name}! أنا مساعدك الصحي المتخصص في مرض السكري. ${
-          currentPatient.lastReading
-            ? `لاحظت أن آخر قراءة لك كانت ${currentPatient.lastReading} mg/dL${
-                currentPatient.lastReading > 180 ? " وهي مرتفعة قليلاً" : ""
-              }.`
-            : ""
+          lastReadingNote
         } كيف تشعر الآن؟`;
-        const response = await api.chat.sendMessage(currentPatient.id, "مرحباً");
-        setMessages([{ id: response.aiMessage.id, text: initialMessage, sender: "assistant", timestamp: response.aiMessage.timestamp }]);
+        setMessages([{ id: `${currentPatient.id}-welcome`, text: initialMessage, sender: "assistant", timestamp: new Date().toISOString() }]);
       } else {
         setMessages(history);
       }
@@ -133,7 +134,7 @@ export default function PatientDashboardDiabetes() {
   const handleSaveReading = async () => {
     if (!newReading || !currentPatient) return;
     const value = Number(newReading);
-    if (isNaN(value) || value <= 0) return;
+    if (Number.isNaN(value) || value <= 0) return;
 
     setSavingReading(true);
     try {
@@ -145,7 +146,14 @@ export default function PatientDashboardDiabetes() {
       setTimeOfReading("الآن");
 
       // Auto-send to AI for feedback
-      const statusText = value < 70 ? "منخفض" : value <= 130 ? "طبيعي" : value <= 180 ? "مرتفع قليلاً" : "مرتفع جداً";
+      let statusText = "مرتفع جداً";
+      if (value < 70) {
+        statusText = "منخفض";
+      } else if (value <= 130) {
+        statusText = "طبيعي";
+      } else if (value <= 180) {
+        statusText = "مرتفع قليلاً";
+      }
       await handleSend(`سجلت قراءة سكر جديدة: ${value} mg/dL (${timeOfReading}) — الحالة: ${statusText}`);
     } catch (error) {
       console.error("Error saving reading:", error);
@@ -157,9 +165,9 @@ export default function PatientDashboardDiabetes() {
 
   if (!currentPatient) return null;
 
-  const readingStatus = currentPatient.lastReading != null
-    ? getDiabetesStatus(currentPatient.lastReading)
-    : null;
+  const readingStatus = currentPatient.lastReading === null
+    ? null
+    : getDiabetesStatus(currentPatient.lastReading);
 
   const getProgressValue = () => Math.min(((currentPatient.lastReading || 0) / 400) * 100, 100);
 
@@ -179,7 +187,7 @@ export default function PatientDashboardDiabetes() {
               </Box>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <Tooltip title="تغيير المريض">
-                  <IconButton size="small" onClick={() => navigate("/select-patient")} sx={{ color: "text.secondary" }}>
+                    <IconButton size="small" onClick={() => navigate("/?mode=new")} sx={{ color: "text.secondary" }}>
                     <People fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -196,7 +204,7 @@ export default function PatientDashboardDiabetes() {
 
             {/* Stats Cards */}
             <Grid container spacing={{ xs: 1, sm: 1.5 }}>
-              <Grid item size={{ xs: 4 }}>
+              <Grid size={{ xs: 4 }}>
                 <Card sx={{ bgcolor: "rgba(255, 255, 255, 0.05)" }}>
                   <CardContent sx={{ p: { xs: 1, sm: 1.5 }, "&:last-child": { pb: { xs: 1, sm: 1.5 } } }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem" }}>آخر قراءة</Typography>
@@ -209,7 +217,7 @@ export default function PatientDashboardDiabetes() {
                 </Card>
               </Grid>
 
-              <Grid item size={{ xs: 4 }}>
+              <Grid size={{ xs: 4 }}>
                 <Card sx={{ bgcolor: "rgba(255, 255, 255, 0.05)" }}>
                   <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem" }}>المدى المستهدف</Typography>
@@ -219,7 +227,7 @@ export default function PatientDashboardDiabetes() {
                 </Card>
               </Grid>
 
-              <Grid item size={{ xs: 4 }}>
+              <Grid size={{ xs: 4 }}>
                 <Card
                   sx={{ bgcolor: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.4)", cursor: "pointer", "&:hover": { bgcolor: "rgba(245,158,11,0.25)" } }}
                   onClick={() => setReadingDialogOpen(true)}
@@ -305,9 +313,9 @@ export default function PatientDashboardDiabetes() {
           {/* Quick Suggestions — wrapped, no horizontal scroll */}
           <Box sx={{ px: 2, py: 1, bgcolor: "#0f172a" }}>
             <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
-              {quickSuggestions.map((suggestion, i) => (
+              {quickSuggestions.map((suggestion) => (
                 <Chip
-                  key={i}
+                  key={suggestion}
                   label={suggestion}
                   onClick={() => handleSend(suggestion)}
                   size="small"
@@ -338,7 +346,9 @@ export default function PatientDashboardDiabetes() {
                 variant="outlined"
                 size="small"
                 disabled={isTyping}
-                InputProps={{ sx: { direction: "rtl", bgcolor: "rgba(255, 255, 255, 0.05)" } }}
+                slotProps={{
+                  input: { sx: { direction: "rtl", bgcolor: "rgba(255, 255, 255, 0.05)" } },
+                }}
               />
             </Box>
           </Box>
@@ -358,8 +368,10 @@ export default function PatientDashboardDiabetes() {
               onChange={(e) => setNewReading(e.target.value)}
               placeholder="مثال: 120"
               autoFocus
-              InputProps={{ sx: { fontSize: "1.5rem", textAlign: "center", direction: "ltr" } }}
-              inputProps={{ min: 20, max: 600 }}
+              slotProps={{
+                input: { sx: { fontSize: "1.5rem", textAlign: "center", direction: "ltr" } },
+                htmlInput: { min: 20, max: 600 },
+              }}
             />
             {newReading && Number(newReading) > 0 && (() => {
               const s = getDiabetesStatus(Number(newReading));

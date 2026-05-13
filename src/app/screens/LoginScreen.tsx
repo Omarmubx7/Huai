@@ -9,35 +9,29 @@ import {
   Avatar,
   Alert,
   CircularProgress,
-  Divider,
-  Link,
 } from '@mui/material';
-import { Lock, Email, Person } from '@mui/icons-material';
+import { Lock, Email } from '@mui/icons-material';
 import { motion } from 'motion/react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const MotionPaper = motion.create(Paper);
 
 export default function LoginScreen() {
-  const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
 
-    // Basic client-side validation
     if (!email.trim() || !password.trim()) {
       setError('يرجى ملء جميع الحقول');
       return;
     }
+
     if (password.length < 6) {
       setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
       return;
@@ -45,22 +39,9 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      if (mode === 'login') {
-        const result = await signIn(email.trim(), password);
-        if (result.error) setError(result.error);
-      } else {
-        if (!displayName.trim()) {
-          setError('يرجى إدخال اسمك');
-          setLoading(false);
-          return;
-        }
-        const result = await signUp(email.trim(), password, displayName.trim());
-        if (result.error) {
-          setError(result.error);
-        } else {
-          setSuccess('تم إنشاء الحساب بنجاح! يمكنك الدخول الآن.');
-          setMode('login');
-        }
+      const result = await signIn(email.trim(), password);
+      if (result.error) {
+        setError(result.error);
       }
     } catch {
       setError('حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.');
@@ -94,7 +75,6 @@ export default function LoginScreen() {
             border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          {/* Logo */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <motion.div
               animate={{ scale: [1, 1.05, 1] }}
@@ -118,38 +98,17 @@ export default function LoginScreen() {
               مساعدك الصحي الذكي
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {mode === 'login' ? 'سجّل دخولك للمتابعة' : 'أنشئ حساباً جديداً'}
+              سجّل دخولك للمتابعة
             </Typography>
           </Box>
 
-          {/* Alerts */}
           {error && (
             <Alert severity="error" sx={{ mb: 2, direction: 'rtl' }}>
               {error}
             </Alert>
           )}
-          {success && (
-            <Alert severity="success" sx={{ mb: 2, direction: 'rtl' }}>
-              {success}
-            </Alert>
-          )}
 
-          {/* Form */}
           <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            {mode === 'register' && (
-              <TextField
-                fullWidth
-                label="الاسم الكريم"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="أدخل اسمك..."
-                InputProps={{
-                  startAdornment: <Person sx={{ color: 'text.secondary', mr: 1 }} />,
-                  sx: { direction: 'rtl' },
-                }}
-              />
-            )}
-
             <TextField
               fullWidth
               type="email"
@@ -158,8 +117,10 @@ export default function LoginScreen() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="example@email.com"
               dir="ltr"
-              InputProps={{
-                startAdornment: <Email sx={{ color: 'text.secondary', mr: 1 }} />,
+              slotProps={{
+                input: {
+                  startAdornment: <Email sx={{ color: 'text.secondary', mr: 1 }} />,
+                },
               }}
             />
 
@@ -171,8 +132,10 @@ export default function LoginScreen() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               dir="ltr"
-              InputProps={{
-                startAdornment: <Lock sx={{ color: 'text.secondary', mr: 1 }} />,
+              slotProps={{
+                input: {
+                  startAdornment: <Lock sx={{ color: 'text.secondary', mr: 1 }} />,
+                },
               }}
             />
 
@@ -193,46 +156,10 @@ export default function LoginScreen() {
                 },
               }}
             >
-              {loading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : mode === 'login' ? (
-                'تسجيل الدخول'
-              ) : (
-                'إنشاء الحساب'
-              )}
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'تسجيل الدخول'}
             </Button>
           </Box>
 
-          {/* Toggle mode */}
-          <Divider sx={{ my: 3 }}>
-            <Typography variant="caption" color="text.secondary">أو</Typography>
-          </Divider>
-
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              {mode === 'login' ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟'}{' '}
-              <Link
-                component="button"
-                type="button"
-                onClick={() => {
-                  setMode(mode === 'login' ? 'register' : 'login');
-                  setError(null);
-                  setSuccess(null);
-                }}
-                sx={{
-                  fontWeight: 700,
-                  color: 'primary.main',
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  '&:hover': { textDecoration: 'underline' },
-                }}
-              >
-                {mode === 'login' ? 'أنشئ حساباً' : 'سجّل دخولك'}
-              </Link>
-            </Typography>
-          </Box>
-
-          {/* Medical Disclaimer */}
           <Box
             sx={{
               mt: 3,

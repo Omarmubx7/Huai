@@ -1,18 +1,14 @@
 import { createBrowserRouter } from "react-router";
 import Onboarding from "./screens/Onboarding";
-import PatientSelector from "./screens/PatientSelector";
 import PatientDashboardDiabetes from "./screens/PatientDashboardDiabetes";
 import PatientDashboardHypertension from "./screens/PatientDashboardHypertension";
 import AdminDashboard from "./screens/AdminDashboard";
+import CreateAdmin from "./screens/CreateAdmin";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     Component: Onboarding,
-  },
-  {
-    path: "/select-patient",
-    Component: PatientSelector,
   },
   {
     path: "/patient/diabetes",
@@ -25,5 +21,9 @@ export const router = createBrowserRouter([
   {
     path: "/admin",
     Component: AdminDashboard,
+  },
+  {
+    path: "/create-admin",
+    Component: CreateAdmin,
   },
 ]);
